@@ -180,6 +180,39 @@ giving them a popular one. It shows the catalogue designation instead.
 
 ---
 
+## Before this can go in a store
+
+The app works and is measured. These are the things that are actually still in the way, so none
+of them is a surprise later.
+
+**Android**
+
+- **A signing key.** Release builds are currently signed with Flutter's debug keystore, which
+  Google Play rejects - every Flutter project on earth shares that key. One `keytool` command
+  creates an upload key; `app/android/app/build.gradle.kts` says exactly what to run and what
+  never to commit. Losing that key means losing the ability to update the app, so it needs a
+  backup somewhere safe.
+- **An app icon.** Still the stock Flutter icon.
+
+**iOS**
+
+- **A Mac with Xcode.** Not a preference - iOS binaries cannot be built on Windows. The code and
+  the `Info.plist` are ready, and nothing here has been compiled or tested on iOS, which is why
+  this README makes no claim that it works there.
+- **An Apple Developer account**, which is a paid yearly membership.
+
+**Both**
+
+- **A privacy declaration**, which is unusually easy here and worth keeping that way: the app
+  collects nothing, stores nothing and transmits nothing. It asks for coarse location, uses it on
+  the device to compute angles, and has no network code at all. That is the honest answer to every
+  question on both stores' privacy forms, and it stays true only as long as nobody adds analytics.
+- **Screenshots and a listing**, which need the icon first.
+
+One thing worth deciding early: the app currently speaks English only.
+
+---
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).

@@ -15,10 +15,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Set, and permanent. Google Play ties a listing to this string for the life of the app:
+        // once something is published under it, it can never be changed.
         applicationId = "com.egebaykal.starmap"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
@@ -31,8 +30,21 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // NOT PUBLISHABLE AS IT STANDS, and this is the first thing to fix before a store
+            // listing. A release build signed with the debug keystore installs fine on your own
+            // phone and is rejected by Google Play, because the debug key is shared by every
+            // Flutter project on earth.
+            //
+            // What has to happen, once, by the account holder:
+            //   1. keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA \
+            //        -keysize 2048 -validity 10000 -alias upload
+            //   2. put its path and passwords in android/key.properties  (NEVER commit that file,
+            //      and never commit the .jks either - losing the key means losing the ability to
+            //      update the app, and leaking it means someone else can ship as you)
+            //   3. read key.properties here and use it as the signingConfig
+            //
+            // Left on the debug key deliberately rather than half-wired: a signing config that
+            // looks real but points at a keystore nobody has is worse than one that says so.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
