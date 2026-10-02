@@ -15,6 +15,17 @@ Everything is computed on the device from the clock and your latitude and longit
 network code in this app.** It works in a dark field with no signal, which is where a sky app is
 actually used, and your position never leaves the phone.
 
+That is checked against the built binary rather than only against the source. `aapt2 dump
+permissions` on the release APK returns exactly one capability:
+
+```
+uses-permission: android.permission.ACCESS_COARSE_LOCATION
+```
+
+No `INTERNET`. It does appear in a *debug* build, where Flutter's own tooling adds it for hot
+reload and breakpoints, and it is worth knowing that is why - the main manifest, which is the only
+one a release build uses, does not contain it.
+
 ---
 
 ## How wrong is it?
@@ -105,6 +116,16 @@ cd app
 flutter pub get
 flutter run -d chrome        # or an attached phone, or an emulator
 ```
+
+Both shipping targets have been built on Windows:
+
+| Build | Size |
+|---|---|
+| `flutter build apk --release --split-per-abi` arm64-v8a | **15.6 MB** |
+| the same, armeabi-v7a | 13.0 MB |
+| the same, x86_64 | 17.0 MB |
+| `flutter build apk --debug` | 152 MB — every architecture plus debug symbols, which is why a debug size says nothing about what a user downloads |
+| `flutter build web --release` | 2.0 MB of app code, plus the 454 KB catalogue |
 
 Built and tested with **Flutter 3.47.6 / Dart 3.13.5**. Android needs the Android SDK with
 `compileSdk 36` and **JDK 17** — Flutter's Gradle plugin does not accept JDK 25.
