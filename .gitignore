@@ -1,0 +1,39 @@
+# Downloaded source catalogues. Reproducible: `python data/sources.py` fetches them again,
+# and every file records where it came from. They are large and not ours to redistribute.
+data/raw/
+
+# The built catalogue, in both forms. Reproducible from data/raw by
+# `py -3.12 data/build_catalogue.py`, which is the command the app's failure screen prints.
+# Committing them would mean reviewing a 450 KB generated diff on every catalogue change, and
+# would let the asset drift away from the sources it came from.
+app/assets/starmap.db
+app/assets/stars.json
+
+# NOT ignored, on purpose: app/test/fixtures/horizons.json. Those are NASA's reference positions
+# and the tests must run without a network. Committing them also means a change in the reference
+# shows up as a reviewable diff instead of silently moving the goalposts.
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/android/.gradle/
+app/android/local.properties
+app/ios/Pods/
+app/ios/.symlinks/
+app/windows/flutter/ephemeral/
+app/linux/flutter/ephemeral/
+app/macos/Flutter/ephemeral/
+*.iml
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

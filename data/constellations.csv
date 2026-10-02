@@ -1,0 +1,102 @@
+# The 88 IAU constellations: abbreviation, Latin name, Latin genitive, English name.
+#
+# Curated in this repository rather than fetched, on purpose. It is 88 static Latin words that
+# have not changed since 1930, and the alternatives measured worse: Wikidata's SPARQL endpoint
+# does not verify over TLS from the build machine and returns obsolete constellations mixed in
+# with the modern ones, and no VizieR table carries the genitives.
+#
+# What stops a typo here from reaching the app: `build_catalogue.py` asserts that the `abbr`
+# column is EXACTLY the set of 88 abbreviations found in the Davenhall boundary table - no extras,
+# none missing. A misspelled abbreviation fails the build rather than producing a nameless
+# constellation.
+#
+# Names follow the IAU list at https://www.iau.org/public/themes/constellations/
+abbr,latin,genitive,english
+And,Andromeda,Andromedae,Andromeda
+Ant,Antlia,Antliae,Air Pump
+Aps,Apus,Apodis,Bird of Paradise
+Aql,Aquila,Aquilae,Eagle
+Aqr,Aquarius,Aquarii,Water Bearer
+Ara,Ara,Arae,Altar
+Ari,Aries,Arietis,Ram
+Aur,Auriga,Aurigae,Charioteer
+Boo,Bootes,Bootis,Herdsman
+CMa,Canis Major,Canis Majoris,Greater Dog
+CMi,Canis Minor,Canis Minoris,Lesser Dog
+CVn,Canes Venatici,Canum Venaticorum,Hunting Dogs
+Cae,Caelum,Caeli,Chisel
+Cam,Camelopardalis,Camelopardalis,Giraffe
+Cap,Capricornus,Capricorni,Sea Goat
+Car,Carina,Carinae,Keel
+Cas,Cassiopeia,Cassiopeiae,Cassiopeia
+Cen,Centaurus,Centauri,Centaur
+Cep,Cepheus,Cephei,Cepheus
+Cet,Cetus,Ceti,Whale
+Cha,Chamaeleon,Chamaeleontis,Chameleon
+Cir,Circinus,Circini,Compasses
+Cnc,Cancer,Cancri,Crab
+Col,Columba,Columbae,Dove
+Com,Coma Berenices,Comae Berenices,Berenice's Hair
+CrA,Corona Australis,Coronae Australis,Southern Crown
+CrB,Corona Borealis,Coronae Borealis,Northern Crown
+Crt,Crater,Crateris,Cup
+Cru,Crux,Crucis,Southern Cross
+Crv,Corvus,Corvi,Crow
+Cyg,Cygnus,Cygni,Swan
+Del,Delphinus,Delphini,Dolphin
+Dor,Dorado,Doradus,Dolphinfish
+Dra,Draco,Draconis,Dragon
+Equ,Equuleus,Equulei,Little Horse
+Eri,Eridanus,Eridani,River Eridanus
+For,Fornax,Fornacis,Furnace
+Gem,Gemini,Geminorum,Twins
+Gru,Grus,Gruis,Crane
+Her,Hercules,Herculis,Hercules
+Hor,Horologium,Horologii,Pendulum Clock
+Hya,Hydra,Hydrae,Water Snake
+Hyi,Hydrus,Hydri,Lesser Water Snake
+Ind,Indus,Indi,Indian
+LMi,Leo Minor,Leonis Minoris,Lesser Lion
+Lac,Lacerta,Lacertae,Lizard
+Leo,Leo,Leonis,Lion
+Lep,Lepus,Leporis,Hare
+Lib,Libra,Librae,Scales
+Lup,Lupus,Lupi,Wolf
+Lyn,Lynx,Lyncis,Lynx
+Lyr,Lyra,Lyrae,Lyre
+Men,Mensa,Mensae,Table Mountain
+Mic,Microscopium,Microscopii,Microscope
+Mon,Monoceros,Monocerotis,Unicorn
+Mus,Musca,Muscae,Fly
+Nor,Norma,Normae,Carpenter's Square
+Oct,Octans,Octantis,Octant
+Oph,Ophiuchus,Ophiuchi,Serpent Bearer
+Ori,Orion,Orionis,Orion
+Pav,Pavo,Pavonis,Peacock
+Peg,Pegasus,Pegasi,Pegasus
+Per,Perseus,Persei,Perseus
+Phe,Phoenix,Phoenicis,Phoenix
+Pic,Pictor,Pictoris,Painter's Easel
+PsA,Piscis Austrinus,Piscis Austrini,Southern Fish
+Psc,Pisces,Piscium,Fishes
+Pup,Puppis,Puppis,Stern
+Pyx,Pyxis,Pyxidis,Mariner's Compass
+Ret,Reticulum,Reticuli,Reticle
+Scl,Sculptor,Sculptoris,Sculptor
+Sco,Scorpius,Scorpii,Scorpion
+Sct,Scutum,Scuti,Shield
+Ser,Serpens,Serpentis,Serpent
+Sex,Sextans,Sextantis,Sextant
+Sge,Sagitta,Sagittae,Arrow
+Sgr,Sagittarius,Sagittarii,Archer
+Tau,Taurus,Tauri,Bull
+Tel,Telescopium,Telescopii,Telescope
+TrA,Triangulum Australe,Trianguli Australis,Southern Triangle
+Tri,Triangulum,Trianguli,Triangle
+Tuc,Tucana,Tucanae,Toucan
+UMa,Ursa Major,Ursae Majoris,Great Bear
+UMi,Ursa Minor,Ursae Minoris,Lesser Bear
+Vel,Vela,Velorum,Sails
+Vir,Virgo,Virginis,Maiden
+Vol,Volans,Volantis,Flying Fish
+Vul,Vulpecula,Vulpeculae,Little Fox

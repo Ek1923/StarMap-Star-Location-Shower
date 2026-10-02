@@ -1,0 +1,45 @@
+name: starmap
+description: "See which stars are above you right now."
+publish_to: 'none'
+
+# Bumped by hand. There is no CI to do it, and a version that moves on its own is a version
+# nobody can point at.
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The only runtime dependency, and it earns its place: the whole app is "what is above YOU",
+  # which needs a latitude and a longitude. Everything else - positions, phases, constellations -
+  # is computed from the bundled catalogue and the device clock, with no network at all.
+  geolocator: ^13.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # Built by `py -3.12 data/build_catalogue.py`. 9,096 stars, the 88 constellations and the IAU
+    # boundary table. Not committed - it is reproducible from data/raw.
+    - assets/stars.json
+
+  fonts:
+    # Spectral, by Production Type. SIL Open Font License 1.1 - see assets/fonts/README.md.
+    # Bundled rather than fetched at runtime: this app has to work in a dark field with no signal,
+    # and a font that arrives over the network is a font that sometimes does not.
+    - family: Spectral
+      fonts:
+        - asset: assets/fonts/Spectral-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Spectral-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Spectral-SemiBold.ttf
+          weight: 600
