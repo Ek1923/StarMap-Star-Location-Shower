@@ -1,12 +1,27 @@
 /// The shell: load the catalogue, find out where we are, compute the sky, show four views of it.
 ///
-/// One computation per minute feeds all four screens, so nothing on screen can disagree with
-/// anything else on screen.
+/// The order matters and is the whole of the online/offline story:
+///
+///   1. Compute everything on the device. This is instant and always works.
+///   2. Show it.
+///   3. In the background, ask NASA/JPL for the same positions, one body at a time.
+///   4. Each answer that arrives replaces one computed position, and the screen sharpens.
+///
+/// Nothing waits on the network. With no signal, step 3 quietly produces nothing and the app is
+/// exactly what it was before - already accurate to a few arcminutes at worst. With a signal, the
+/// positions become NASA's own. Either way the screen says which, and the viewer's coordinates
+/// never leave the device in either case.
+///
+/// One computation feeds all four screens, so nothing on screen can disagree with anything else.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../net/horizons.dart';
 import '../sky/catalogue.dart';
+import '../sky/ephemeris.dart';
 import '../sky/sky_now.dart';
 import 'energy_page.dart';
 import 'location_source.dart';
@@ -35,16 +50,38 @@ class _Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<_Shell> {
+  final HorizonsClient _horizons = HorizonsClient();
+
   Catalogue? _catalogue;
   LocatedObserver? _place;
   SkyNow? _sky;
   String? _failure;
   int _tab = 0;
 
+  /// Readings gathered this session, keyed by body. Kept rather than re-fetched on every rebuild:
+  /// a sky app that queried NASA whenever a tab changed would behave like a scraper, and NASA
+  /// drops connections that do - measured while building the test fixtures.
+  final Map<String, GeocentricReading> _reference = {};
+
+  /// The instant `_reference` describes. Pinned before the first request so that all nine answers
+  /// are for the same moment; mixing readings from different seconds would put the Moon in two
+  /// places at once.
+  DateTime? _referenceFor;
+
+  StreamSubscription<GeocentricReading>? _refinement;
+  bool _refining = false;
+
   @override
   void initState() {
     super.initState();
     _start();
+  }
+
+  @override
+  void dispose() {
+    _refinement?.cancel();
+    _horizons.close();
+    super.dispose();
   }
 
   Future<void> _start() async {
@@ -63,12 +100,9 @@ class _ShellState extends State<_Shell> {
       setState(() {
         _catalogue = catalogue;
         _place = place;
-        _sky = computeSkyNow(
-          when: DateTime.now(),
-          observer: place.observer,
-          catalogue: catalogue,
-        );
       });
+      _recompute();
+      _refine();
     } on Object catch (error) {
       if (!mounted) return;
       // Named rather than hidden behind a spinner that never stops. The most likely cause is a
@@ -77,17 +111,53 @@ class _ShellState extends State<_Shell> {
     }
   }
 
-  void _choosePlace(LocatedObserver place) {
+  /// Rebuild the sky from whatever is known right now.
+  void _recompute() {
     final catalogue = _catalogue;
-    if (catalogue == null) return;
+    final place = _place;
+    if (catalogue == null || place == null) return;
+
+    final when = _referenceFor ?? DateTime.now().toUtc();
     setState(() {
-      _place = place;
       _sky = computeSkyNow(
-        when: DateTime.now(),
+        when: when,
         observer: place.observer,
         catalogue: catalogue,
+        reference: Map.of(_reference),
       );
     });
+  }
+
+  /// Ask NASA for the same positions, in the background, one at a time.
+  void _refine() {
+    _refinement?.cancel();
+    final when = DateTime.now().toUtc();
+    _reference.clear();
+    _referenceFor = when;
+    setState(() => _refining = true);
+    _recompute();
+
+    _refinement = _horizons.geocentricPositions(when: when).listen(
+      (reading) {
+        _reference[reading.body] = reading;
+        _recompute();
+      },
+      onDone: () {
+        if (mounted) setState(() => _refining = false);
+      },
+      onError: (Object _) {
+        // Each body's failure is already swallowed inside the client, so reaching here means the
+        // whole stream gave up. There is nothing to recover: the computed positions are still on
+        // screen and the provenance line already says so.
+        if (mounted) setState(() => _refining = false);
+      },
+      cancelOnError: false,
+    );
+  }
+
+  void _choosePlace(LocatedObserver place) {
+    setState(() => _place = place);
+    _recompute();
   }
 
   @override
@@ -98,7 +168,13 @@ class _ShellState extends State<_Shell> {
     if (sky == null || place == null) return const _Loading();
 
     final pages = [
-      OverheadPage(sky: sky, place: place, onChoosePlace: _choosePlace),
+      OverheadPage(
+        sky: sky,
+        place: place,
+        onChoosePlace: _choosePlace,
+        refining: _refining,
+        onRefresh: _refine,
+      ),
       EnergyPage(sky: sky),
       SignPage(sky: sky),
       MoonPage(sky: sky),

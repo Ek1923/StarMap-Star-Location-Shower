@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../sky/ephemeris.dart';
 import '../sky/sky_now.dart';
 import 'location_source.dart';
 import 'sky_plot.dart';
@@ -13,12 +14,20 @@ class OverheadPage extends StatefulWidget {
     required this.sky,
     required this.place,
     required this.onChoosePlace,
+    this.refining = false,
+    this.onRefresh,
     super.key,
   });
 
   final SkyNow sky;
   final LocatedObserver place;
   final ValueChanged<LocatedObserver> onChoosePlace;
+
+  /// True while answers are still arriving from the reference ephemeris.
+  final bool refining;
+
+  /// Ask the reference again, for the current moment. Null when there is nothing to ask.
+  final VoidCallback? onRefresh;
 
   @override
   State<OverheadPage> createState() => _OverheadPageState();
@@ -91,6 +100,12 @@ class _OverheadPageState extends State<OverheadPage>
           ),
         const SizedBox(height: Space.section),
         _BelowHorizon(sky: sky),
+        const SizedBox(height: Space.section),
+        _Provenance(
+          provenance: sky.provenance,
+          refining: widget.refining,
+          onRefresh: widget.onRefresh,
+        ),
         const SizedBox(height: Space.section),
       ],
     );
@@ -190,6 +205,59 @@ class _PlaceLine extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Where these numbers came from, in the app's own words.
+class _Provenance extends StatelessWidget {
+  const _Provenance({
+    required this.provenance,
+    required this.refining,
+    required this.onRefresh,
+  });
+
+  final EphemerisProvenance provenance;
+  final bool refining;
+  final VoidCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final referenced = provenance.bodiesFromReference > 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          provenance.description,
+          style: Face.body.copyWith(color: referenced ? Night.amber : Night.parchment),
+        ),
+        const SizedBox(height: Space.row),
+        Text(
+          referenced
+              ? 'Fetched from NASA/JPL Horizons, which is the same ephemeris this app is '
+                  'measured against - so for those bodies there is no error left to quote. The '
+                  'request carries a timestamp and nothing else; your location stays on this '
+                  'device and the correction for where you stand is done here.'
+              : 'Worked out from orbital elements and the Moon\'s own series, with no network. '
+                  'Worst case against NASA: five arcminutes for Saturn, two for Jupiter, under '
+                  'half an arcminute for everything else. The full Moon is thirty-one '
+                  'arcminutes wide.',
+          style: Face.quiet,
+        ),
+        if (onRefresh != null) ...[
+          const SizedBox(height: Space.block),
+          GestureDetector(
+            onTap: refining ? null : onRefresh,
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              refining ? 'Asking NASA' : 'Ask NASA again',
+              style: Face.value.copyWith(
+                color: refining ? Night.slate : Night.amber,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

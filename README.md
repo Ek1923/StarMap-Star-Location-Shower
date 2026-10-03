@@ -11,20 +11,52 @@ A small app that answers four questions and does not pretend to answer any other
 | **Your sign** | Your zodiac sign next to the constellation the Sun is *physically* in today. They disagree by about one whole sign, and the screen explains why. |
 | **Moon** | Tonight's phase drawn from the real lit fraction, how far away it is, and when it is next full or new. |
 
-Everything is computed on the device from the clock and your latitude and longitude. **There is no
-network code in this app.** It works in a dark field with no signal, which is where a sky app is
-actually used, and your position never leaves the phone.
+**It works with no signal, and gets sharper with one.**
 
-That is checked against the built binary rather than only against the source. `aapt2 dump
-permissions` on the release APK returns exactly one capability:
+The app computes the whole sky on the device, instantly, from the clock and your latitude and
+longitude. That is the normal path and it never fails: in a dark field with no reception the app
+is complete.
+
+When there is a connection it then asks **NASA/JPL Horizons** for the same positions in the
+background, one body at a time, and each answer that arrives replaces one computed position. Since
+Horizons is the very ephemeris the accuracy table below is measured against, there is no error
+left to quote for a body that came from it. Nothing waits on the network, a body that fails keeps
+its computed value, and the screen always says which source it used - including when it is half
+and half.
+
+### Your location still never leaves the device
+
+Horizons can compute a position for an observer at a given spot on Earth. Asking it to would mean
+sending that spot. So the app asks for **geocentric** positions - as seen from the Earth's centre
+- and applies the observer correction itself, with the same code the offline path uses. The
+request carries a body code and a timestamp. That is all of it.
+
+That only works if the device-side correction reproduces what Horizons would have returned had it
+been told where you are, so it is measured rather than assumed. Taking NASA's geocentric figures,
+applying the correction here, and comparing against NASA's own topocentric figures for the same
+bodies at the same instants:
+
+| | worst disagreement |
+|---|---|
+| Moon | **0.44″** |
+| every other body | 0.29″ to 0.32″ |
+
+The Moon is the one that proves it: its parallax from the Earth's surface reaches a full degree,
+twice its own width, so a correction that was wrong would show up here as arcminutes rather than
+half an arcsecond. Keeping your coordinates off the network costs nothing.
+
+The release APK therefore declares two capabilities and no more - verified with `aapt2 dump
+permissions` on the built binary:
 
 ```
 uses-permission: android.permission.ACCESS_COARSE_LOCATION
+uses-permission: android.permission.INTERNET
 ```
 
-No `INTERNET`. It does appear in a *debug* build, where Flutter's own tooling adds it for hot
-reload and breakpoints, and it is worth knowing that is why - the main manifest, which is the only
-one a release build uses, does not contain it.
+**The web build never reaches NASA.** Measured: `ssd.jpl.nasa.gov` sends no
+`Access-Control-Allow-Origin` header, so a browser blocks the request. That is not a bug to work
+around - the offline path is the normal path - but it is why the web build always says positions
+were computed here.
 
 ---
 
@@ -137,8 +169,12 @@ location usage string, but it cannot be compiled or tested on Windows.
 
 ```bash
 py -3.12 -m unittest discover -s data/tests -t data    # 11 tests: the catalogue build
-cd app && flutter test                                  # 20 tests: the engine and every screen
+cd app && flutter test                                  # 28 tests: the engine, the online path,
+                                                        #           and every screen
 ```
+
+The online path is tested with **no network at all**: the parser against a real Horizons reply
+committed byte for byte, and the observer correction against NASA's own topocentric figures.
 
 The accuracy tests print the error tables above rather than only asserting a threshold, so the
 headroom is visible instead of hidden.
@@ -156,6 +192,9 @@ data/                     Python, build time only. Never ships, never runs on th
   make_fixtures.py        -> app/test/fixtures/horizons.json, straight from NASA
   constellations.csv      the 88 Latin names, checked against the boundary table by the build
 
+app/lib/net/
+  horizons.dart           the one service this app talks to, and what it refuses to send
+
 app/lib/sky/              the astronomy. Pure Dart, no UI, no I/O, no network.
   julian.dart             time scales and sidereal time
   precession, nutation    frames: J2000, mean of date, true of date
@@ -166,7 +205,8 @@ app/lib/sky/              the astronomy. Pure Dart, no UI, no I/O, no network.
   observer.dart           where you stand, and the parallax that causes
   brightness.dart         magnitude -> lux
   zodiac.dart             both answers, labelled
-  sky_now.dart            one call every screen reads from
+  ephemeris.dart          which source a position came from, and how to say so
+  sky_now.dart            one call every screen reads from - with or without a reference
 
 app/lib/ui/               four screens, one theme
 ```
@@ -224,10 +264,12 @@ of them is a surprise later.
 
 **Both**
 
-- **A privacy declaration**, which is unusually easy here and worth keeping that way: the app
-  collects nothing, stores nothing and transmits nothing. It asks for coarse location, uses it on
-  the device to compute angles, and has no network code at all. That is the honest answer to every
-  question on both stores' privacy forms, and it stays true only as long as nobody adds analytics.
+- **A privacy declaration**, which is still simple and worth keeping that way. The app collects
+  nothing and stores nothing. It asks for coarse location and uses it on the device. It makes one
+  kind of outbound request, to `ssd.jpl.nasa.gov`, carrying a body code and a timestamp - no
+  identifier, no location, nothing about the person. Both stores ask whether data is "linked to
+  the user"; here nothing is sent that could be. That stays true only as long as nobody adds
+  analytics or a crash reporter.
 - **Screenshots and a listing**, which need the icon first.
 
 One thing worth deciding early: the app currently speaks English only.

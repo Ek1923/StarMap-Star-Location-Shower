@@ -22,6 +22,8 @@ so a change in them shows up as a reviewable diff instead of silently moving the
 from __future__ import annotations
 
 import json
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
@@ -61,6 +63,12 @@ EPOCHS: tuple[str, ...] = (
     "2027-06-21 12:00",
 )
 
+# Horizons is a free public service and it defends itself. Measured 2026-10-03: 45 requests
+# issued back to back ended with the remote host closing the connection. These two numbers are
+# what makes the run finish - a pause between requests, and a retry that waits longer each time.
+_PAUSE_BETWEEN_REQUESTS_S = 0.6
+_RETRIES = 4
+
 _MONTHS = {
     "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
     "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
@@ -93,15 +101,27 @@ def _parse_epoch(text: str) -> str:
     return moment.isoformat().replace("+00:00", "Z")
 
 
-def fetch(body: str, command: str, site: str) -> list[dict[str, object]]:
-    lon, lat, alt = SITES[site]
+def fetch(body: str, command: str, site: str | None) -> list[dict[str, object]]:
+    """One body, all epochs. `site` of None asks for geocentric coordinates.
+
+    Geocentric is the form the app requests at run time, because a query that carries no observer
+    coordinates cannot leak the viewer's position. The topocentric form is only used here, to have
+    something to check the device-side observer correction against.
+    """
+    if site is None:
+        centre = [("CENTER", "'500@399'")]  # 500@399 is the Earth's centre
+    else:
+        lon, lat, alt = SITES[site]
+        centre = [
+            ("CENTER", "'coord@399'"),
+            ("COORD_TYPE", "GEODETIC"),
+            ("SITE_COORD", f"'{lon},{lat},{alt}'"),
+        ]
     params = [
         ("format", "text"),
         ("COMMAND", f"'{command}'"),
         ("EPHEM_TYPE", "OBSERVER"),
-        ("CENTER", "'coord@399'"),
-        ("COORD_TYPE", "GEODETIC"),
-        ("SITE_COORD", f"'{lon},{lat},{alt}'"),
+        *centre,
         ("TLIST", " ".join(f"'{e}'" for e in EPOCHS)),
         ("QUANTITIES", "'2,4,9,10,13,20'"),
         ("ANG_FORMAT", "DEG"),
@@ -110,8 +130,24 @@ def fetch(body: str, command: str, site: str) -> list[dict[str, object]]:
     ]
     url = f"{API}?{urllib.parse.urlencode(params)}"
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    with urllib.request.urlopen(request, timeout=180) as response:
-        text = response.read().decode("utf-8", errors="replace")
+
+    text = ""
+    for attempt in range(_RETRIES):
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                text = response.read().decode("utf-8", errors="replace")
+            break
+        except (urllib.error.URLError, OSError) as exc:
+            if attempt == _RETRIES - 1:
+                raise RuntimeError(
+                    f"{body}/{site}: gave up after {_RETRIES} attempts. Last error: {exc}. "
+                    "Horizons rate-limits; raise _PAUSE_BETWEEN_REQUESTS_S and try again."
+                ) from exc
+            wait = _PAUSE_BETWEEN_REQUESTS_S * (2 ** (attempt + 1))
+            print(f"         {body}/{site}: {type(exc).__name__}, retrying in {wait:.1f}s")
+            time.sleep(wait)
+
+    time.sleep(_PAUSE_BETWEEN_REQUESTS_S)
 
     lines = text.splitlines()
     try:
@@ -131,7 +167,7 @@ def fetch(body: str, command: str, site: str) -> list[dict[str, object]]:
         rows.append(
             {
                 "body": body,
-                "site": site,
+                "site": site if site is not None else "geocentric",
                 "utc": _parse_epoch(fields[0]),
                 "ra_deg": _parse_number(fields[3]),
                 "dec_deg": _parse_number(fields[4]),
@@ -155,7 +191,11 @@ def fetch(body: str, command: str, site: str) -> list[dict[str, object]]:
 
 def main() -> int:
     observations: list[dict[str, object]] = []
+    geocentric: list[dict[str, object]] = []
     for body, command in BODIES.items():
+        rows = fetch(body, command, None)
+        geocentric.extend(rows)
+        print(f"  {body:<8} {'geocentric':<10} {len(rows)} epochs")
         for site in SITES:
             rows = fetch(body, command, site)
             observations.extend(rows)
@@ -183,6 +223,9 @@ def main() -> int:
         },
         "epochs_utc": list(EPOCHS),
         "observations": observations,
+        # The same bodies and epochs seen from the Earth's centre. This is the shape of the reply
+        # the app parses in online mode, and the input its observer correction is tested on.
+        "geocentric": geocentric,
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +233,8 @@ def main() -> int:
     print(
         f"\nwrote {OUT}  ({OUT.stat().st_size:,} bytes)\n"
         f"  {len(BODIES)} bodies x {len(SITES)} sites x {len(EPOCHS)} epochs "
-        f"= {len(observations)} observations"
+        f"= {len(observations)} topocentric observations\n"
+        f"  plus {len(geocentric)} geocentric rows, for the online path"
     )
     return 0
 

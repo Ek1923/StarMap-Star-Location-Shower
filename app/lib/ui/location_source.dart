@@ -5,8 +5,10 @@
 /// those are normal, neither is an error, and the app stays usable in both cases: it falls back
 /// to a place you choose from a list and says plainly which position it is using.
 ///
-/// Nothing is sent anywhere. The coordinates are used on the device to compute angles and are
-/// never stored or transmitted - there is no network code in this app at all.
+/// The coordinates are used on the device to compute angles, and are never stored or transmitted.
+/// The app does make one kind of outbound request - to NASA/JPL for planet positions - and it is
+/// built so that request cannot carry them: it asks for geocentric positions and applies the
+/// observer correction locally. See `lib/net/horizons.dart`.
 library;
 
 import 'package:geolocator/geolocator.dart';

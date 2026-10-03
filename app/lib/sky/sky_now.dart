@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'brightness.dart';
 import 'catalogue.dart';
+import 'ephemeris.dart';
 import 'coordinates.dart';
 import 'moon.dart';
 import 'observer.dart';
@@ -66,6 +67,7 @@ class SkyNow {
     required this.stars,
     required this.zodiac,
     required this.actualConstellationLatin,
+    required this.provenance,
   });
 
   final DateTime when;
@@ -85,6 +87,9 @@ class SkyNow {
   final List<SkyBody> stars;
 
   final ZodiacReading zodiac;
+
+  /// Where the positions came from, so a screen can say so rather than imply it.
+  final EphemerisProvenance provenance;
 
   /// The Latin name of the constellation the Sun is actually in, resolved from the catalogue here
   /// rather than in a widget - the UI has no business holding a constellation lookup table.
@@ -108,12 +113,44 @@ SkyNow computeSkyNow({
   required Observer observer,
   required Catalogue catalogue,
   double starMagnitudeLimit = 4.0,
+  Map<String, GeocentricReading> reference = const {},
 }) {
   final utc = when.toUtc();
+  var fromReference = 0;
 
+  /// A body's geocentric apparent position and distance: the reference's, when there is one, and
+  /// this device's otherwise. Everything downstream - the observer correction, the horizon, the
+  /// screens - is identical either way, which is the whole reason online and offline cannot
+  /// disagree about anything but the position itself.
+  ({Equatorial position, double distanceAu, double? magnitude}) resolve(
+    String body,
+    Equatorial Function() computePosition,
+    double Function() computeDistance,
+  ) {
+    final reading = reference[body];
+    if (reading == null) {
+      return (
+        position: computePosition(),
+        distanceAu: computeDistance(),
+        magnitude: null,
+      );
+    }
+    fromReference++;
+    return (
+      position: Equatorial(
+        rightAscensionDegrees: reading.rightAscensionDegrees,
+        declinationDegrees: reading.declinationDegrees,
+        equinox: Equinox.ofDate,
+      ),
+      distanceAu: reading.distanceAu,
+      magnitude: reading.magnitude,
+    );
+  }
+
+  final sunResolved = resolve('sun', () => sunPosition(utc), () => sunDistanceAu(utc));
   final sunTopocentric = toTopocentric(
-    geocentric: sunPosition(utc),
-    distanceAu: sunDistanceAu(utc),
+    geocentric: sunResolved.position,
+    distanceAu: sunResolved.distanceAu,
     observer: observer,
     when: utc,
   );
@@ -123,32 +160,45 @@ SkyNow computeSkyNow({
     horizontal: sunTopocentric.horizontal,
     // The Sun's apparent magnitude is a fixed published figure, not something this app computes:
     // it barely varies, and inventing a model for it would add error for no gain.
-    magnitude: -26.74,
+    magnitude: sunResolved.magnitude ?? -26.74,
     distanceAu: sunTopocentric.distanceAu,
     angularDiameterArcsec: sunAngularDiameterArcseconds(utc),
   );
 
+  final moonResolved = resolve(
+    'moon',
+    () => moonPosition(utc),
+    () => moonDistanceKm(utc) / 149597870.7,
+  );
   final moonTopocentric = toTopocentric(
-    geocentric: moonPosition(utc),
-    distanceAu: moonDistanceKm(utc) / 149597870.7,
+    geocentric: moonResolved.position,
+    distanceAu: moonResolved.distanceAu,
     observer: observer,
     when: utc,
   );
+  // The phase stays computed on the device even when the position does not. It is a function of
+  // the Sun-Moon angle over time, and fetching it would be a second request for a figure already
+  // within 0.9 percentage points of the reference.
   final phase = moonPhase(utc);
   final moon = SkyBody(
     name: 'Moon',
     kind: SkyBodyKind.moon,
     horizontal: moonTopocentric.horizontal,
-    magnitude: _moonMagnitude(phase),
+    magnitude: moonResolved.magnitude ?? _moonMagnitude(phase),
     distanceAu: moonTopocentric.distanceAu,
     angularDiameterArcsec: moonAngularDiameterArcseconds(utc),
   );
 
   final planets = <SkyBody>[];
   for (final planet in Planet.values) {
+    final resolved = resolve(
+      planet.name,
+      () => geocentricPosition(planet, utc),
+      () => distanceFromEarthAu(planet, utc),
+    );
     final topocentric = toTopocentric(
-      geocentric: geocentricPosition(planet, utc),
-      distanceAu: distanceFromEarthAu(planet, utc),
+      geocentric: resolved.position,
+      distanceAu: resolved.distanceAu,
       observer: observer,
       when: utc,
     );
@@ -157,7 +207,7 @@ SkyNow computeSkyNow({
         name: planet.displayName,
         kind: SkyBodyKind.planet,
         horizontal: topocentric.horizontal,
-        magnitude: planetMagnitude(planet, utc),
+        magnitude: resolved.magnitude ?? planetMagnitude(planet, utc),
         distanceAu: topocentric.distanceAu,
       ),
     );
@@ -191,7 +241,7 @@ SkyNow computeSkyNow({
     );
   }
 
-  final reading = zodiacFor(utc, catalogue.boundaries);
+  final zodiacReading = zodiacFor(utc, catalogue.boundaries);
 
   return SkyNow(
     when: utc,
@@ -203,10 +253,17 @@ SkyNow computeSkyNow({
     nextNew: nextNewMoon(utc),
     planets: planets,
     stars: stars,
-    zodiac: reading,
-    actualConstellationLatin: reading.actualConstellation == null
+    zodiac: zodiacReading,
+    actualConstellationLatin: zodiacReading.actualConstellation == null
         ? null
-        : catalogue.constellations[reading.actualConstellation]?.latin,
+        : catalogue.constellations[zodiacReading.actualConstellation]?.latin,
+    provenance: EphemerisProvenance(
+      source: fromReference > 0
+          ? EphemerisSource.nasaHorizons
+          : EphemerisSource.computedOnDevice,
+      bodiesFromReference: fromReference,
+      bodiesTotal: Planet.values.length + 2,
+    ),
   );
 }
 

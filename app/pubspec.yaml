@@ -13,10 +13,16 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The only runtime dependency, and it earns its place: the whole app is "what is above YOU",
-  # which needs a latitude and a longitude. Everything else - positions, phases, constellations -
-  # is computed from the bundled catalogue and the device clock, with no network at all.
+  # Two runtime dependencies, each with one job.
+  #
+  # The whole app is "what is above YOU", which needs a latitude and a longitude.
   geolocator: ^13.0.2
+  #
+  # And one HTTP client, for the single service this app talks to: NASA/JPL Horizons, which
+  # sharpens the positions when there is a connection. `package:http` rather than dart:io because
+  # dart:io does not exist on the web. The app is fully usable with this never succeeding - see
+  # lib/net/horizons.dart.
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

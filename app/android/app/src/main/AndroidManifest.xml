@@ -4,6 +4,13 @@
          the phone. A kilometre of position error moves every figure the app shows by well
          under an arcminute, which is why the fine-location permission is not requested. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Outbound HTTPS to one host: ssd.jpl.nasa.gov, NASA/JPL's Horizons ephemeris, to sharpen
+         the planet positions when there is a connection. The request carries a body code and a
+         timestamp and NOTHING ELSE - in particular not the coordinates above, because the app
+         asks for geocentric positions and applies the observer correction on the device. The app
+         is fully usable with this permission's traffic blocked; it falls back to its own
+         computation and says on screen which one it used. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="StarMap"
         android:name="${applicationName}"

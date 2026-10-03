@@ -50,10 +50,16 @@ Built and tested with **Flutter 3.47.6 / Dart 3.13.5**.
 
 ## Permissions
 
-One, on both platforms: coarse location. The app turns a latitude and longitude into angles on the
-device and has no network code at all, so the position cannot leave the phone. A kilometre of
-position error moves every figure the app shows by well under an arcminute, which is why fine
-location is not requested.
+Two, and no more.
 
-Declining it is handled rather than fatal: the app says what happened and falls back to a place
-you pick from a list.
+**Coarse location.** A kilometre of position error moves every figure the app shows by well under
+an arcminute, so fine location would be asking for more than the app can use. Declining it is
+handled rather than fatal: the app says what happened and falls back to a place you pick from a
+list.
+
+**Internet.** For exactly one host, `ssd.jpl.nasa.gov`, to replace the app's own planet positions
+with NASA's when there is a connection. The request carries a body code and a timestamp. It does
+NOT carry your coordinates - the app asks for geocentric positions and applies the observer
+correction here, which `test/online_path_test.dart` measures as agreeing with NASA's own
+topocentric figures to within 0.44 arcseconds. Blocking this traffic entirely leaves the app fully
+working on its computed positions, and the Overhead screen says which source it used.
