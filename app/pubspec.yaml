@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # Bumped by hand. There is no CI to do it, and a version that moves on its own is a version
 # nobody can point at.
-version: 0.1.0+1
+version: 1.2.0+3
 
 environment:
   sdk: ^3.13.0
@@ -36,6 +36,9 @@ flutter:
     # Built by `py -3.12 data/build_catalogue.py`. 9,096 stars, the 88 constellations and the IAU
     # boundary table. Not committed - it is reproducible from data/raw.
     - assets/stars.json
+    # Planet and Sun maps for the 3D view. Solar System Scope (INOVE), CC BY 4.0 - see
+    # assets/planets/README.md for the attribution the licence requires.
+    - assets/planets/
 
   fonts:
     # Spectral, by Production Type. SIL Open Font License 1.1 - see assets/fonts/README.md.
@@ -49,3 +52,9 @@ flutter:
           weight: 400
         - asset: assets/fonts/Spectral-SemiBold.ttf
           weight: 600
+
+  # GLSL fragment shaders. Verified to compile for web and Android in this Flutter version
+  # before the 3D view was designed around them - the compiled artefact lands in
+  # build/web/assets/shaders/, which is the proof rather than the documentation's word.
+  shaders:
+    - shaders/planet.frag

@@ -9,6 +9,13 @@ data/raw/
 app/assets/starmap.db
 app/assets/stars.json
 
+# Planet surface maps: 5.1 MB of CC BY 4.0 textures from Solar System Scope, fetched by
+# `scripts/fetch_planet_textures.sh`. Not committed - they are somebody else's images, they are
+# reproducible from one command, and five megabytes of JPEG in git history is five megabytes
+# nobody can review.
+app/assets/planets/*.jpg
+app/assets/planets/*.png
+
 # NOT ignored, on purpose: app/test/fixtures/horizons.json. Those are NASA's reference positions
 # and the tests must run without a network. Committing them also means a change in the reference
 # shows up as a reviewable diff instead of silently moving the goalposts.

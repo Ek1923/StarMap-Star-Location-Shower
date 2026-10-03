@@ -6,12 +6,17 @@ with a terminal open in this directory.
 
 ## Run it
 
-The star catalogue is built by the Python pipeline and is not committed, so build it first:
+Two things are built rather than committed - the star catalogue and the planet textures - so get
+those first:
 
 ```bash
 py -3.12 ../data/sources.py
 py -3.12 ../data/build_catalogue.py
+bash ../scripts/fetch_planet_textures.sh   # 5.1 MB of CC BY 4.0 planet maps
 ```
+
+Without the catalogue the app shows a screen naming these commands. Without the textures every
+screen still works and the 3D view shows its own error instead of a black rectangle.
 
 Then:
 

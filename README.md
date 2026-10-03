@@ -7,6 +7,7 @@ A small app that answers four questions and does not pretend to answer any other
 | Screen | What it tells you |
 |---|---|
 | **Overhead** | Every planet, the Moon and the bright stars, plotted at their real compass bearing and real height above your horizon. The ones under your feet are shown too, greyed, because "behind you" and "set" are different answers. |
+| **Solar system** | The whole system in 3D, as it is arranged right now, that you can fly through. Real positions, real planet maps, real rotation rates, and the real stars behind it. |
 | **Energy** | Which planet is actually delivering the most light to you tonight, in lux, ranked. The winner changes from month to month. |
 | **Your sign** | Your zodiac sign next to the constellation the Sun is *physically* in today. They disagree by about one whole sign, and the screen explains why. |
 | **Moon** | Tonight's phase drawn from the real lit fraction, how far away it is, and when it is next full or new. |
@@ -57,6 +58,58 @@ uses-permission: android.permission.INTERNET
 `Access-Control-Allow-Origin` header, so a browser blocks the request. That is not a bug to work
 around - the offline path is the normal path - but it is why the web build always says positions
 were computed here.
+
+---
+
+## The solar system view
+
+A 3D scene you can swing around and fly through. What makes it worth building rather than
+animating a diagram is that almost all of it is real:
+
+- **Positions.** Every planet is where it actually is at the moment on screen, from the same
+  ephemeris the accuracy table below is measured against. Tonight's alignment is tonight's
+  alignment, and the orbit paths are each planet's real orbit sampled over one of its own years -
+  so Mercury's is visibly off-centre rather than a circle.
+- **Appearance.** Each body is a raytraced sphere with a real surface map on it, lit from the
+  Sun's actual direction. The day/night terminator therefore falls where it falls and curves the
+  way a sphere's does, instead of being a gradient painted across a disc.
+- **Rotation.** Each body turns at its own sidereal rate on its own axis. Jupiter comes round in
+  under ten hours. Venus turns backwards, because it does. Uranus rolls rather than spins,
+  because its axis is tipped 97.8°.
+- **Stars.** The 8,404 catalogue stars brighter than magnitude 6.5, at their catalogued positions,
+  sized by measured magnitude and coloured by measured B-V index. Rigel is blue and Betelgeuse is
+  red because their colour indices say so. Fly out to Neptune and the constellations behind it are
+  the ones really behind it.
+- **Sizes relative to each other.** Jupiter is 11.2 Earth radii, the Sun is 109, the Moon is
+  0.2724. Those ratios are published values and there is a test on each one.
+
+### The one thing that is not real, and cannot be
+
+**Size relative to distance.** At true scale, from three astronomical units away, Earth is about
+one hundredth of a pixel across. The solar system is almost entirely empty space, and an honest
+render of it is a black screen with a few specks in it.
+
+So the bodies are drawn larger than life. The factor is shown on screen at all times, a slider
+takes it down to 1× so you can see what the truthful version looks like, and **distances are
+never exaggerated**. That is the whole of the compromise and it is stated rather than hidden.
+
+Saturn's rings are the other simplification: they are the right shape, in the right plane, at the
+right radius - the A ring's outer edge really is 2.27 Saturn radii, and the Cassini division
+really is there - but the planet does not cast a shadow onto them, which a correct render would.
+
+### How it is drawn
+
+One GLSL fragment shader, `shaders/planet.frag`, raytraces a single textured sphere. Flutter
+invokes it once per body and composites the results back to front.
+
+That split is deliberate: GLSL requires constant indices for sampler arrays, so a single shader
+looping over ten planets cannot pick the right texture for each. One body per pass sidesteps it
+entirely, keeps each planet's appearance something you can look at on its own, and lets Flutter do
+the depth sort - which with ten opaque spheres is both simpler and exact.
+
+Verified before the view was designed around it: fragment shaders compile and bundle on this
+Flutter version for both web and Android. The compiled artefact lands in
+`build/web/assets/shaders/planet.frag`, which is the proof rather than the documentation's word.
 
 ---
 
@@ -228,6 +281,7 @@ needs a native plugin, and native plugins do not work on the web. So the build a
 
 | Source | What for | Licence |
 |---|---|---|
+| [Solar System Scope](https://www.solarsystemscope.com/textures/) (INOVE) | the planet and Sun surface maps | CC BY 4.0 |
 | [Yale Bright Star Catalogue, 5th rev.](https://vizier.cds.unistra.fr/viz-bin/asu-tsv?-source=V/50) (Hoffleit & Warren 1991, via VizieR) | 9,110 stars to magnitude ~6.5 — the naked-eye sky | CDS/VizieR, free with attribution |
 | [IAU Catalog of Star Names](https://www.pas.rochester.edu/~emamajek/WGSN/IAU-CSN.txt) (WGSN) | the only officially approved star names | CC BY 4.0 |
 | [Constellation Boundary Data](https://vizier.cds.unistra.fr/viz-bin/asu-tsv?-source=VI/42) (Davenhall & Leggett 1989, via VizieR) | the IAU constellation boundaries | CDS/VizieR, free with attribution |

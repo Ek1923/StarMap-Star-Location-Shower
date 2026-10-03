@@ -28,6 +28,7 @@ import 'location_source.dart';
 import 'moon_page.dart';
 import 'overhead_page.dart';
 import 'sign_page.dart';
+import 'solar/solar_system_view.dart';
 import 'theme.dart';
 
 class StarMapApp extends StatelessWidget {
@@ -175,6 +176,9 @@ class _ShellState extends State<_Shell> {
         refining: _refining,
         onRefresh: _refine,
       ),
+      // The 3D scene gets the catalogue because its starfield is the real one - the same 9,096
+      // rows the Overhead plot draws from, so the two screens cannot show different skies.
+      SolarSystemView(catalogue: _catalogue!),
       EnergyPage(sky: sky),
       SignPage(sky: sky),
       MoonPage(sky: sky),
@@ -200,7 +204,7 @@ class _Nav extends StatelessWidget {
   Widget build(BuildContext context) {
     // Words, in sentence case, each naming what the screen shows. No icons: four small pictures
     // of celestial objects would all look like the same dot.
-    const labels = ['Overhead', 'Energy', 'Your sign', 'Moon'];
+    const labels = ['Overhead', 'Solar system', 'Energy', 'Your sign', 'Moon'];
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: Night.ground,
@@ -210,8 +214,11 @@ class _Nav extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: Space.block),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          // Scrollable rather than spaced-evenly: five labels overflow a narrow phone, and an
+          // overflowing nav bar is a yellow-and-black stripe across the bottom of the app.
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
             children: [
               for (var i = 0; i < labels.length; i++)
                 GestureDetector(
@@ -232,6 +239,7 @@ class _Nav extends StatelessWidget {
                   ),
                 ),
             ],
+            ),
           ),
         ),
       ),
